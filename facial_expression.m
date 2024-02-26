@@ -52,7 +52,7 @@ FixationRect=CenterRect([0,0,12,12],rect);
 KbName('UnifyKeyNames');
 leftKey=KbName( 'w');% Left
 rightKey=KbName( 'o'); %Right
-escapekey = KbName('q');
+escapekey = KbName('ESCAPE');
 startkey=KbName('SPACE');
 % TriggerKey = KbName('5%');
 
@@ -98,7 +98,8 @@ while exist(savefname,'file')
 end
 
 if blackrockData == 1
-    [onlineNSP,blackrockData,video]=StartBlackrockAquisition(savefname,videoData);
+%     [onlineNSP,blackrockData,video]=StartBlackrockAquisition(savefname,videoData);
+onlineNSP=TaskComment(savefname,'start'); 
 end
 
 WaitSecs(1);
@@ -143,7 +144,11 @@ for trial=1:n_trials
             end
             
             if blackrockData == 1
-                cbmex('comment', 167, 0, commentWord);
+                for jj = onlineNSP % this uses the output of TaskComment to determine how many NSPs are online
+                    cbmex('comment',167,0,commentWord,'instance',jj-1);
+                    %added cbmex comment gets sent to each NSP (1=NSP-2 and 0=NSP1)
+                end
+%                 cbmex('comment', 167, 0, commentWord);
             end
             firstFrameEachStim = 0;
         end
@@ -156,7 +161,11 @@ for trial=1:n_trials
                 answer{trial,2}='perceived happy';
                 answer{trial,3}=timeSecs-ts;
                 if blackrockData == 1
-                    cbmex('comment',255, 0, answer{trial,2});
+                    for jj = onlineNSP % this uses the output of TaskComment to determine how many NSPs are online
+                        cbmex('comment',255,0,answer{trial,2},'instance',jj-1);
+                        %added cbmex comment gets sent to each NSP (1=NSP-2 and 0=NSP1)
+                    end
+%                     cbmex('comment',255, 0, answer{trial,2});
                 end
                 break
             elseif keyIsDown && keyCode(leftKey)
@@ -164,7 +173,11 @@ for trial=1:n_trials
                 answer{trial,2}='perceived sad';
                 answer{trial,3}=timeSecs-ts;
                 if blackrockData == 1
-                    cbmex('comment', 255, 0, answer{trial,2});
+                    for jj = onlineNSP % this uses the output of TaskComment to determine how many NSPs are online
+                        cbmex('comment',255,0,answer{trial,2},'instance',jj-1);
+                        %added cbmex comment gets sent to each NSP (1=NSP-2 and 0=NSP1)
+                    end
+%                     cbmex('comment', 255, 0, answer{trial,2});
                 end
                 break
             elseif (touch && keyCode(escapekey))
@@ -194,7 +207,10 @@ for trial=1:n_trials
     % Quit ~~~~~~~~~~~
     if QuitFlag~=0
         disp('Got it. Exit right now.')
-        break
+        % Stop Blackrock
+        TaskComment(savefname,'kill');         
+        exitTask(patient_ID,savefname,answer);
+        return
     end
     % Quit ~~~~~~~~~~~
     WaitSecs(0.5);
@@ -205,19 +221,22 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ShowCursor;
 if blackrockData == 1
-    StopBlackrockAquisition(savefname,onlineNSP,video);
+    TaskComment(savefname,'stop');
+%     StopBlackrockAquisition(savefname,onlineNSP,video);
 end
 
+exitTask(patient_ID,savefname,answer);
 
-Screen('CloseAll');   
-t_off=GetSecs;
-disp(['total time is ' num2str(t_off-t_on) ' s'])
+function exitTask(patient_ID,savefname,answer)
+Screen('CloseAll');
+% t_off=GetSecs;
+% disp(['total time is ' num2str(t_off-t_on) ' s'])
 %% Save answer
 savedir = fullfile(userpath,'PatientData',patient_ID,'Micro-Bias');
 if ~exist(savedir,'dir')
     mkdir(savedir)
 end
 filename = [savefname,'_',datestr(now,'YYYYmmDDHHMM'),'.mat'];
-save(fullfile(savedir,filename),'answer');    
-      
+save(fullfile(savedir,filename),'answer');
+end
 
